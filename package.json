@@ -3,12 +3,13 @@
   "displayName": "Codex Pulse",
   "description": "Realtime-first Codex quota status for the VS Code status bar.",
   "version": "0.0.1",
-  "publisher": "ylwgg",
+  "publisher": "ylw",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/ylwgg/codex-pulse.git"
   },
+  "icon": "logo.png",
   "engines": {
     "vscode": "^1.90.0"
   },
