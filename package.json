@@ -23,9 +23,7 @@
     "openai"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:codexPulse.refresh",
-    "onCommand:codexPulse.showDiagnostics"
+    "onStartupFinished"
   ],
   "main": "./src/extension.js",
   "contributes": {
