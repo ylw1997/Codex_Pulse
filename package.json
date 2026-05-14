@@ -1,0 +1,76 @@
+{
+  "name": "codex-pulse",
+  "displayName": "Codex Pulse",
+  "description": "Realtime-first Codex quota status for the VS Code status bar.",
+  "version": "0.0.1",
+  "publisher": "ylwgg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ylwgg/codex-pulse.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "codex",
+    "quota",
+    "usage",
+    "statusbar",
+    "openai"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:codexPulse.refresh",
+    "onCommand:codexPulse.showDiagnostics"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexPulse.refresh",
+        "title": "Codex Pulse: Refresh"
+      },
+      {
+        "command": "codexPulse.showDiagnostics",
+        "title": "Codex Pulse: Show Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Codex Pulse",
+      "properties": {
+        "codexPulse.codexCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Codex executable. Leave empty to auto-detect common locations."
+        },
+        "codexPulse.codexHome": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Codex home directory. Leave empty to use ~/.codex."
+        },
+        "codexPulse.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 15,
+          "description": "How often Codex Pulse refreshes realtime quota."
+        },
+        "codexPulse.displayMode": {
+          "type": "string",
+          "default": "remaining",
+          "enum": [
+            "remaining",
+            "used"
+          ],
+          "description": "Show remaining or used quota percentages in the status bar."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
