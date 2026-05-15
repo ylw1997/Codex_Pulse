@@ -2,7 +2,7 @@
   "name": "codex-pulse",
   "displayName": "Codex Pulse",
   "description": "Realtime-first Codex quota status for the VS Code status bar.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "ylw",
   "license": "MIT",
   "repository": {

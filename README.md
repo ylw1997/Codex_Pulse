@@ -24,7 +24,7 @@ Codex Pulse shows your current Codex quota windows directly in VS Code:
 
 <div align="center">
 
-<img width="2079" height="1503" alt="image" src="https://github.com/user-attachments/assets/2e757a15-ad6f-4280-a662-8e8521b42f0a" />
+<img  alt="image" src="https://github.com/user-attachments/assets/2e757a15-ad6f-4280-a662-8e8521b42f0a" />
 
 
 </div>
