@@ -2,10 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  formatTooltip,
   formatStatusText,
   normalizeRateLimitResponse,
   parseSessionLine,
 } = require("../src/quota");
+const { resolveLanguage } = require("../src/i18n");
 
 test("normalizes realtime app-server quota shape", () => {
   const snapshot = normalizeRateLimitResponse({
@@ -46,7 +48,7 @@ test("parses session token_count quota events", () => {
   assert.equal(snapshot.secondary.remainingPercent, 71);
 });
 
-test("formats status text in remaining and used modes", () => {
+test("formats status text without used or localized labels", () => {
   const snapshot = normalizeRateLimitResponse({
     rateLimits: {
       primary: { usedPercent: 44, windowDurationMins: 300 },
@@ -54,6 +56,42 @@ test("formats status text in remaining and used modes", () => {
     },
   });
 
-  assert.equal(formatStatusText(snapshot, "remaining"), "$(pulse) Codex 5h 56% · 7d 70%");
-  assert.equal(formatStatusText(snapshot, "used"), "$(pulse) Codex 5h used 44% · 7d used 30%");
+  assert.equal(formatStatusText(snapshot, "remaining", "en"), "$(pulse) Codex 5h 56% · 7d 70%");
+  assert.equal(formatStatusText(snapshot, "used", "en"), "$(pulse) Codex 5h 44% · 7d 30%");
+  assert.equal(formatStatusText(snapshot, "used", "zh-cn"), "$(pulse) Codex 5h 44% · 7d 30%");
+});
+
+test("formats tooltip in English and Chinese based on VS Code language", () => {
+  const snapshot = normalizeRateLimitResponse({
+    rateLimits: {
+      planType: "team",
+      primary: { usedPercent: 44, windowDurationMins: 300 },
+      secondary: { usedPercent: 30, windowDurationMins: 10080 },
+    },
+  });
+  snapshot.diagnostics = ["Realtime: C:\\Users\\ylwgg\\AppData\\Local\\OpenAI\\Codex\\bin\\codex.exe"];
+  const checkedAt = new Date("2026-05-14T02:00:00.000Z");
+
+  const english = formatTooltip(snapshot, "remaining", checkedAt, "en");
+  assert.match(english, /- Source: Codex realtime\n- Plan: team\n- Updated:/);
+  assert.match(english, /- 5h: 56% remaining \/ 44% used/);
+  assert.match(english, /- Diagnostics path: C:\\Users\\ylwgg\\AppData\\Local\\OpenAI\\Codex\\bin\\codex\.exe/);
+  assert.doesNotMatch(english, /Language:/);
+  assert.doesNotMatch(english, /Observed:/);
+  assert.doesNotMatch(english, /Last checked:/);
+
+  const chinese = formatTooltip(snapshot, "remaining", checkedAt, "zh-cn");
+  assert.match(chinese, /- 来源: Codex 实时接口\n- 计划: team\n- 更新时间:/);
+  assert.match(chinese, /- 5h: 56% 剩余 \/ 44% 已用/);
+  assert.match(chinese, /- 诊断路径: C:\\Users\\ylwgg\\AppData\\Local\\OpenAI\\Codex\\bin\\codex\.exe/);
+  assert.doesNotMatch(chinese, /语言:/);
+  assert.doesNotMatch(chinese, /观测时间:/);
+  assert.doesNotMatch(chinese, /检查时间:/);
+});
+
+test("resolves VS Code language to supported locales", () => {
+  assert.equal(resolveLanguage("zh-cn"), "zh");
+  assert.equal(resolveLanguage("zh-tw"), "zh");
+  assert.equal(resolveLanguage("en"), "en");
+  assert.equal(resolveLanguage("fr"), "en");
 });

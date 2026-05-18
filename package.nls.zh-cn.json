@@ -1,0 +1,9 @@
+{
+  "extension.description": "在 VS Code 状态栏实时优先显示 Codex 额度。",
+  "command.refresh.title": "Codex Pulse: 刷新",
+  "command.showDiagnostics.title": "Codex Pulse: 显示诊断信息",
+  "configuration.codexCommand.description": "Codex 可执行文件路径。留空时自动检测常见位置。",
+  "configuration.codexHome.description": "Codex 主目录路径。留空时使用 ~/.codex。",
+  "configuration.refreshIntervalSeconds.description": "Codex Pulse 刷新实时额度的间隔秒数。",
+  "configuration.displayMode.description": "在状态栏显示剩余额度百分比或已用额度百分比。"
+}

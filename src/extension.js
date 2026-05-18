@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
+const { getMessages } = require("./i18n");
 const {
   formatStatusText,
   formatTooltip,
@@ -17,12 +18,14 @@ let lastSnapshot;
 let lastError;
 
 function activate(context) {
+  const messages = getMessages(vscode.env.language);
   outputChannel = vscode.window.createOutputChannel("Codex Pulse");
+
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.name = "Codex Pulse";
   statusBarItem.command = "codexPulse.refresh";
   statusBarItem.text = "$(sync~spin) Codex";
-  statusBarItem.tooltip = "Codex Pulse is starting.";
+  statusBarItem.tooltip = messages.starting;
   statusBarItem.show();
 
   context.subscriptions.push(
@@ -86,6 +89,7 @@ function getRuntimeConfig() {
     codexHome: config.get("codexHome", ""),
     refreshIntervalSeconds: config.get("refreshIntervalSeconds", 60),
     displayMode: config.get("displayMode", "remaining"),
+    language: vscode.env.language,
     realtimeTimeoutMs: 12000,
   };
 }
@@ -109,17 +113,18 @@ async function refreshQuota(manual) {
 
 async function doRefreshQuota() {
   const config = getRuntimeConfig();
+  const messages = getMessages(config.language);
+
   try {
     const snapshot = await readQuotaSnapshot(config);
+    const checkedAt = new Date();
     lastSnapshot = snapshot;
     lastError = undefined;
-    statusBarItem.text = formatStatusText(snapshot, config.displayMode);
+    statusBarItem.text = formatStatusText(snapshot, config.displayMode, config.language);
     statusBarItem.tooltip = new vscode.MarkdownString([
-      formatTooltip(snapshot, config.displayMode),
+      formatTooltip(snapshot, config.displayMode, checkedAt, config.language),
       "",
-      `Last checked: ${new Date().toLocaleString()}`,
-      "",
-      "Click to refresh. Run **Codex Pulse: Show Diagnostics** for details.",
+      messages.clickToRefresh,
     ].join("\n"));
     statusBarItem.backgroundColor = snapshot.source === "realtime"
       ? undefined
@@ -129,18 +134,19 @@ async function doRefreshQuota() {
     lastError = error;
     statusBarItem.text = "$(warning) Codex";
     statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
-    statusBarItem.tooltip = `Codex Pulse failed: ${error.message}`;
+    statusBarItem.tooltip = `${messages.failed}: ${error.message}`;
     outputChannel.appendLine(`[${new Date().toISOString()}] ERROR ${error.stack || error.message}`);
   }
 }
 
 function showDiagnostics() {
+  const messages = getMessages(vscode.env.language);
   outputChannel.show(true);
-  outputChannel.appendLine("---- Codex Pulse diagnostics ----");
-  outputChannel.appendLine(`Time: ${new Date().toISOString()}`);
-  outputChannel.appendLine(`Config: ${JSON.stringify(getRuntimeConfig(), null, 2)}`);
-  outputChannel.appendLine(`Last snapshot: ${lastSnapshot ? JSON.stringify(safeSnapshot(lastSnapshot), null, 2) : "none"}`);
-  outputChannel.appendLine(`Last error: ${lastError ? lastError.message : "none"}`);
+  outputChannel.appendLine(messages.diagnosticsTitle);
+  outputChannel.appendLine(`${messages.time}: ${new Date().toISOString()}`);
+  outputChannel.appendLine(`${messages.config}: ${JSON.stringify(getRuntimeConfig(), null, 2)}`);
+  outputChannel.appendLine(`${messages.lastSnapshot}: ${lastSnapshot ? JSON.stringify(safeSnapshot(lastSnapshot), null, 2) : messages.none}`);
+  outputChannel.appendLine(`${messages.lastError}: ${lastError ? lastError.message : messages.none}`);
 }
 
 function safeSnapshot(snapshot) {

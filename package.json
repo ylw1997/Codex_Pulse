@@ -1,7 +1,7 @@
 {
   "name": "codex-pulse",
   "displayName": "Codex Pulse",
-  "description": "Realtime-first Codex quota status for the VS Code status bar.",
+  "description": "%extension.description%",
   "version": "1.0.1",
   "publisher": "ylw",
   "license": "MIT",
@@ -31,11 +31,11 @@
     "commands": [
       {
         "command": "codexPulse.refresh",
-        "title": "Codex Pulse: Refresh"
+        "title": "%command.refresh.title%"
       },
       {
         "command": "codexPulse.showDiagnostics",
-        "title": "Codex Pulse: Show Diagnostics"
+        "title": "%command.showDiagnostics.title%"
       }
     ],
     "configuration": {
@@ -44,18 +44,18 @@
         "codexPulse.codexCommand": {
           "type": "string",
           "default": "",
-          "description": "Path to the Codex executable. Leave empty to auto-detect common locations."
+          "description": "%configuration.codexCommand.description%"
         },
         "codexPulse.codexHome": {
           "type": "string",
           "default": "",
-          "description": "Path to the Codex home directory. Leave empty to use ~/.codex."
+          "description": "%configuration.codexHome.description%"
         },
         "codexPulse.refreshIntervalSeconds": {
           "type": "number",
           "default": 60,
           "minimum": 15,
-          "description": "How often Codex Pulse refreshes realtime quota."
+          "description": "%configuration.refreshIntervalSeconds.description%"
         },
         "codexPulse.displayMode": {
           "type": "string",
@@ -64,7 +64,7 @@
             "remaining",
             "used"
           ],
-          "description": "Show remaining or used quota percentages in the status bar."
+          "description": "%configuration.displayMode.description%"
         }
       }
     }

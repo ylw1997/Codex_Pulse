@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { CodexAppServerClient } = require("./appServerClient");
+const { getMessages } = require("./i18n");
 
 const SESSION_TAIL_BYTES = 2 * 1024 * 1024;
 const SESSION_SCAN_LIMIT = 120;
@@ -181,7 +182,7 @@ function listSessionFiles(root) {
 function normalizeWindow(window) {
   const usedPercent = clampPercent(Number(window.usedPercent ?? window.used_percent ?? 0));
   const windowMinutes = Number(window.windowDurationMins ?? window.window_minutes ?? window.windowMinutes ?? 0);
-  const resetEpoch = window.resetsAt ?? window.resets_at ?? window.reset_at ?? window.resets_at;
+  const resetEpoch = window.resetsAt ?? window.resets_at ?? window.reset_at;
   const resetAt = resetEpoch ? new Date(Number(resetEpoch) * 1000) : undefined;
 
   return {
@@ -193,34 +194,58 @@ function normalizeWindow(window) {
   };
 }
 
-function formatStatusText(snapshot, displayMode = "remaining") {
+function formatStatusText(snapshot, displayMode = "remaining", language = "en") {
   if (displayMode === "used") {
-    return `$(pulse) Codex ${snapshot.primary.label} used ${Math.round(snapshot.primary.usedPercent)}% · ${snapshot.secondary.label} used ${Math.round(snapshot.secondary.usedPercent)}%`;
+    return `$(pulse) Codex ${snapshot.primary.label} ${Math.round(snapshot.primary.usedPercent)}% · ${snapshot.secondary.label} ${Math.round(snapshot.secondary.usedPercent)}%`;
   }
 
   return `$(pulse) Codex ${snapshot.primary.label} ${Math.round(snapshot.primary.remainingPercent)}% · ${snapshot.secondary.label} ${Math.round(snapshot.secondary.remainingPercent)}%`;
 }
 
-function formatTooltip(snapshot, displayMode = "remaining") {
+function formatTooltip(snapshot, displayMode = "remaining", checkedAt, language = "en") {
+  const messages = getMessages(language);
   const modeLabel = displayMode === "used" ? "used" : "remaining";
   return [
     "**Codex Pulse**",
     "",
-    `Source: ${snapshot.source === "realtime" ? "Realtime app-server" : "Session fallback"}`,
-    `Plan: ${snapshot.planType}`,
-    `Observed: ${formatDate(snapshot.observedAt)}`,
+    `- ${messages.source}: ${snapshot.source === "realtime" ? messages.realtimeSource : messages.sessionSource}`,
+    `- ${messages.plan}: ${snapshot.planType}`,
+    `- ${messages.updatedAt}: ${formatDate(checkedAt || snapshot.observedAt)}`,
     "",
-    formatWindowTooltip(snapshot.primary, modeLabel),
-    formatWindowTooltip(snapshot.secondary, modeLabel),
+    `**${messages.quota}**`,
     "",
-    ...(snapshot.diagnostics || []),
-  ].join("\n");
+    formatWindowTooltip(snapshot.primary, modeLabel, messages),
+    formatWindowTooltip(snapshot.secondary, modeLabel, messages),
+    "",
+    ...formatDiagnostics(snapshot.diagnostics, messages),
+  ].filter((line) => line !== undefined).join("\n");
 }
 
-function formatWindowTooltip(window, modeLabel) {
-  const percent = modeLabel === "used" ? window.usedPercent : window.remainingPercent;
+function formatWindowTooltip(window, modeLabel, messages) {
   const reset = window.resetAt ? formatDate(window.resetAt) : "unknown";
-  return `- ${window.label}: ${Math.round(percent)}% ${modeLabel}, resets at ${reset}`;
+  if (modeLabel === "used") {
+    return `- ${window.label}: ${Math.round(window.usedPercent)}% ${messages.used} / ${Math.round(window.remainingPercent)}% ${messages.remaining}, ${messages.resetsAt} ${reset}`;
+  }
+
+  return `- ${window.label}: ${Math.round(window.remainingPercent)}% ${messages.remaining} / ${Math.round(window.usedPercent)}% ${messages.used}, ${messages.resetsAt} ${reset}`;
+}
+
+function formatDiagnostics(diagnostics, messages) {
+  if (!diagnostics?.length) {
+    return [];
+  }
+
+  return diagnostics.map((item) => {
+    const realtimePrefix = "Realtime: ";
+    const sessionPrefix = "Session fallback: ";
+    if (item.startsWith(realtimePrefix)) {
+      return `- ${messages.diagnosticsPath}: ${item.slice(realtimePrefix.length)}`;
+    }
+    if (item.startsWith(sessionPrefix)) {
+      return `- ${messages.diagnosticsPath}: ${item.slice(sessionPrefix.length)}`;
+    }
+    return `- ${item}`;
+  });
 }
 
 function formatWindowLabel(windowMinutes) {

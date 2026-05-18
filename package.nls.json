@@ -1,0 +1,9 @@
+{
+  "extension.description": "Realtime-first Codex quota status for the VS Code status bar.",
+  "command.refresh.title": "Codex Pulse: Refresh",
+  "command.showDiagnostics.title": "Codex Pulse: Show Diagnostics",
+  "configuration.codexCommand.description": "Path to the Codex executable. Leave empty to auto-detect common locations.",
+  "configuration.codexHome.description": "Path to the Codex home directory. Leave empty to use ~/.codex.",
+  "configuration.refreshIntervalSeconds.description": "How often Codex Pulse refreshes realtime quota.",
+  "configuration.displayMode.description": "Show remaining or used quota percentages in the status bar."
+}
