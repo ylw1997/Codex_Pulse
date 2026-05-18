@@ -2,7 +2,7 @@
   "name": "codex-pulse",
   "displayName": "Codex Pulse",
   "description": "%extension.description%",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "publisher": "ylw",
   "license": "MIT",
   "repository": {
