@@ -65,8 +65,12 @@ async function readQuotaSnapshot(config = {}) {
 
 function normalizeRateLimitResponse(response) {
   const limits = response?.rateLimitsByLimitId?.codex || response?.rateLimits;
-  if (!limits?.primary || !limits?.secondary) {
+  if (!limits) {
     throw new Error("Codex app-server returned no codex rate limits.");
+  }
+
+  if (!limits.primary || !limits.secondary) {
+    return normalizeUnavailableSnapshot(limits, "realtime");
   }
 
   return {
@@ -89,8 +93,14 @@ function parseSessionLine(line) {
   }
 
   const limits = event?.payload?.rate_limits;
-  if (!limits?.primary || !limits?.secondary) {
+  if (!limits) {
     return undefined;
+  }
+
+  if (!limits.primary || !limits.secondary) {
+    const snapshot = normalizeUnavailableSnapshot(limits, "session");
+    snapshot.observedAt = new Date(Date.parse(event.timestamp) || Date.now());
+    return snapshot;
   }
 
   return {
@@ -101,6 +111,19 @@ function parseSessionLine(line) {
     credits: limits.credits,
     rateLimitReachedType: limits.rate_limit_reached_type || limits.rateLimitReachedType || null,
     observedAt: new Date(Date.parse(event.timestamp) || Date.now()),
+  };
+}
+
+function normalizeUnavailableSnapshot(limits, source) {
+  return {
+    source,
+    planType: limits.planType || limits.plan_type || "unknown",
+    primary: undefined,
+    secondary: undefined,
+    quotaUnavailable: true,
+    credits: limits.credits,
+    rateLimitReachedType: limits.rateLimitReachedType || limits.rate_limit_reached_type || null,
+    observedAt: new Date(),
   };
 }
 
@@ -195,6 +218,10 @@ function normalizeWindow(window) {
 }
 
 function formatStatusText(snapshot, displayMode = "remaining", language = "en") {
+  if (snapshot.quotaUnavailable || !snapshot.primary || !snapshot.secondary) {
+    return "$(warning) Codex quota";
+  }
+
   if (displayMode === "used") {
     return `$(pulse) Codex ${snapshot.primary.label} ${Math.round(snapshot.primary.usedPercent)}% · ${snapshot.secondary.label} ${Math.round(snapshot.secondary.usedPercent)}%`;
   }
@@ -214,11 +241,21 @@ function formatTooltip(snapshot, displayMode = "remaining", checkedAt, language 
     "",
     `**${messages.quota}**`,
     "",
-    formatWindowTooltip(snapshot.primary, modeLabel, messages),
-    formatWindowTooltip(snapshot.secondary, modeLabel, messages),
+    ...formatQuotaLines(snapshot, modeLabel, messages),
     "",
     ...formatDiagnostics(snapshot.diagnostics, messages),
   ].filter((line) => line !== undefined).join("\n");
+}
+
+function formatQuotaLines(snapshot, modeLabel, messages) {
+  if (snapshot.quotaUnavailable || !snapshot.primary || !snapshot.secondary) {
+    return [`- ${messages.quotaUnavailable}`];
+  }
+
+  return [
+    formatWindowTooltip(snapshot.primary, modeLabel, messages),
+    formatWindowTooltip(snapshot.secondary, modeLabel, messages),
+  ];
 }
 
 function formatWindowTooltip(window, modeLabel, messages) {

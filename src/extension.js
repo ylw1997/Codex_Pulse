@@ -126,7 +126,7 @@ async function doRefreshQuota() {
       "",
       messages.clickToRefresh,
     ].join("\n"));
-    statusBarItem.backgroundColor = snapshot.source === "realtime"
+    statusBarItem.backgroundColor = snapshot.source === "realtime" && !snapshot.quotaUnavailable
       ? undefined
       : new vscode.ThemeColor("statusBarItem.warningBackground");
     outputChannel.appendLine(`[${new Date().toISOString()}] ${snapshot.source}: ${statusBarItem.text}`);
@@ -155,6 +155,7 @@ function safeSnapshot(snapshot) {
     planType: snapshot.planType,
     primary: snapshot.primary,
     secondary: snapshot.secondary,
+    quotaUnavailable: snapshot.quotaUnavailable,
     observedAt: snapshot.observedAt,
     sessionFile: snapshot.sessionFile,
     diagnostics: snapshot.diagnostics,
