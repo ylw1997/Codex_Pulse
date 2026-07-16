@@ -69,15 +69,15 @@ function normalizeRateLimitResponse(response) {
     throw new Error("Codex app-server returned no codex rate limits.");
   }
 
-  if (!limits.primary || !limits.secondary) {
+  if (!limits.primary && !limits.secondary) {
     return normalizeUnavailableSnapshot(limits, "realtime");
   }
 
   return {
     source: "realtime",
     planType: limits.planType || limits.plan_type || "unknown",
-    primary: normalizeWindow(limits.primary),
-    secondary: normalizeWindow(limits.secondary),
+    primary: limits.primary ? normalizeWindow(limits.primary) : undefined,
+    secondary: limits.secondary ? normalizeWindow(limits.secondary) : undefined,
     credits: limits.credits,
     rateLimitReachedType: limits.rateLimitReachedType || limits.rate_limit_reached_type || null,
     observedAt: new Date(),
@@ -97,7 +97,7 @@ function parseSessionLine(line) {
     return undefined;
   }
 
-  if (!limits.primary || !limits.secondary) {
+  if (!limits.primary && !limits.secondary) {
     const snapshot = normalizeUnavailableSnapshot(limits, "session");
     snapshot.observedAt = new Date(Date.parse(event.timestamp) || Date.now());
     return snapshot;
@@ -106,8 +106,8 @@ function parseSessionLine(line) {
   return {
     source: "session",
     planType: limits.plan_type || limits.planType || "unknown",
-    primary: normalizeWindow(limits.primary),
-    secondary: normalizeWindow(limits.secondary),
+    primary: limits.primary ? normalizeWindow(limits.primary) : undefined,
+    secondary: limits.secondary ? normalizeWindow(limits.secondary) : undefined,
     credits: limits.credits,
     rateLimitReachedType: limits.rate_limit_reached_type || limits.rateLimitReachedType || null,
     observedAt: new Date(Date.parse(event.timestamp) || Date.now()),
@@ -138,16 +138,21 @@ function readLatestSessionSnapshot(codexHome) {
     .sort((left, right) => right.mtimeMs - left.mtimeMs)
     .slice(0, SESSION_SCAN_LIMIT);
 
+  let latest;
   for (const file of files) {
     const snapshot = readSessionFileTail(file.filePath);
-    if (snapshot) {
-      snapshot.sessionFile = file.filePath;
-      snapshot.diagnostics = [`Session fallback: ${file.filePath}`];
-      return snapshot;
+    if (snapshot && (!latest || snapshot.observedAt > latest.snapshot.observedAt)) {
+      latest = { snapshot, filePath: file.filePath };
     }
   }
 
-  return undefined;
+  if (!latest) {
+    return undefined;
+  }
+
+  latest.snapshot.sessionFile = latest.filePath;
+  latest.snapshot.diagnostics = [`Session fallback: ${latest.filePath}`];
+  return latest.snapshot;
 }
 
 function readSessionFileTail(filePath) {
@@ -218,15 +223,16 @@ function normalizeWindow(window) {
 }
 
 function formatStatusText(snapshot, displayMode = "remaining", language = "en") {
-  if (snapshot.quotaUnavailable || !snapshot.primary || !snapshot.secondary) {
+  const windows = getQuotaWindows(snapshot);
+  if (snapshot.quotaUnavailable || windows.length === 0) {
     return "$(warning) Codex quota";
   }
 
   if (displayMode === "used") {
-    return `$(pulse) Codex ${snapshot.primary.label} ${Math.round(snapshot.primary.usedPercent)}% · ${snapshot.secondary.label} ${Math.round(snapshot.secondary.usedPercent)}%`;
+    return `$(pulse) Codex ${windows.map((window) => `${window.label} ${Math.round(window.usedPercent)}%`).join(" · ")}`;
   }
 
-  return `$(pulse) Codex ${snapshot.primary.label} ${Math.round(snapshot.primary.remainingPercent)}% · ${snapshot.secondary.label} ${Math.round(snapshot.secondary.remainingPercent)}%`;
+  return `$(pulse) Codex ${windows.map((window) => `${window.label} ${Math.round(window.remainingPercent)}%`).join(" · ")}`;
 }
 
 function formatTooltip(snapshot, displayMode = "remaining", checkedAt, language = "en") {
@@ -248,14 +254,16 @@ function formatTooltip(snapshot, displayMode = "remaining", checkedAt, language 
 }
 
 function formatQuotaLines(snapshot, modeLabel, messages) {
-  if (snapshot.quotaUnavailable || !snapshot.primary || !snapshot.secondary) {
+  const windows = getQuotaWindows(snapshot);
+  if (snapshot.quotaUnavailable || windows.length === 0) {
     return [`- ${messages.quotaUnavailable}`];
   }
 
-  return [
-    formatWindowTooltip(snapshot.primary, modeLabel, messages),
-    formatWindowTooltip(snapshot.secondary, modeLabel, messages),
-  ];
+  return windows.map((window) => formatWindowTooltip(window, modeLabel, messages));
+}
+
+function getQuotaWindows(snapshot) {
+  return [snapshot.primary, snapshot.secondary].filter(Boolean);
 }
 
 function formatWindowTooltip(window, modeLabel, messages) {

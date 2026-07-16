@@ -87,6 +87,40 @@ test("normalizes realtime response with null windows as unavailable quota", () =
   assert.match(formatTooltip(snapshot, "remaining", new Date("2026-05-29T03:14:38.858Z"), "en"), /Quota windows are unavailable/);
 });
 
+test("displays a realtime response with only one quota window", () => {
+  const snapshot = normalizeRateLimitResponse({
+    rateLimits: {
+      planType: "team",
+      primary: { usedPercent: 35, windowDurationMins: 10080, resetsAt: 1784689881 },
+      secondary: null,
+    },
+  });
+
+  assert.equal(snapshot.quotaUnavailable, undefined);
+  assert.equal(snapshot.primary.label, "7d");
+  assert.equal(snapshot.secondary, undefined);
+  assert.equal(formatStatusText(snapshot, "remaining", "zh-cn"), "$(pulse) Codex 7d 65%");
+  assert.match(formatTooltip(snapshot, "remaining", new Date("2026-07-16T01:00:00.000Z"), "zh-cn"), /- 7d: 65% 剩余 \/ 35% 已用/);
+});
+
+test("displays a session event with only one quota window", () => {
+  const snapshot = parseSessionLine(JSON.stringify({
+    timestamp: "2026-07-16T01:00:40.185Z",
+    type: "event_msg",
+    payload: {
+      type: "token_count",
+      rate_limits: {
+        plan_type: "team",
+        primary: { used_percent: 35, window_minutes: 10080, resets_at: 1784689881 },
+        secondary: null,
+      },
+    },
+  }));
+
+  assert.equal(snapshot.quotaUnavailable, undefined);
+  assert.equal(formatStatusText(snapshot, "used", "en"), "$(pulse) Codex 7d 35%");
+});
+
 test("formats status text without used or localized labels", () => {
   const snapshot = normalizeRateLimitResponse({
     rateLimits: {
